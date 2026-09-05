@@ -52,7 +52,22 @@ async function getOrCreateCustomer({ name, cpfCnpj, mobilePhone, email }) {
         params: { cpfCnpj: cleanCpf }
       });
       if (searchRes.data && searchRes.data.data && searchRes.data.data.length > 0) {
-        return searchRes.data.data[0].id;
+        const existingCustomer = searchRes.data.data[0];
+        // Se o nome atual do cliente for diferente, atualiza no Asaas
+        if (existingCustomer.name !== name.trim()) {
+          try {
+            await axios.put(`${config.baseUrl}/customers/${existingCustomer.id}`, {
+              name: name.trim(),
+              mobilePhone: cleanPhone || existingCustomer.mobilePhone,
+              email: (email && email.trim()) || existingCustomer.email
+            }, {
+              headers: { access_token: config.apiKey }
+            });
+          } catch (updateErr) {
+            console.warn('Aviso ao atualizar nome do cliente existente no Asaas:', updateErr.message);
+          }
+        }
+        return existingCustomer.id;
       }
     }
 
