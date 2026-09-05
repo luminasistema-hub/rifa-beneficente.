@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Meus Bilhetes - Rifa Beneficente</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <a href="/" class="text-2xl hover:opacity-80 transition-opacity">🎗️</a>
+        <div>
+          <h1 class="font-extrabold text-slate-800 text-lg leading-tight">Meus Bilhetes</h1>
+          <p class="text-xs text-slate-500">Consulte suas cotas da rifa solidária</p>
+        </div>
+      </div>
+      <a href="/" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg">
+        ← Voltar à Rifa
+      </a>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 py-8 w-full flex-grow">
+    
+    <!-- Caixa de Busca -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-6">
+      <h2 class="text-lg font-black text-slate-900 mb-2">Localizar Meus Bilhetes</h2>
+      <p class="text-xs text-slate-500 mb-4">Digite o número de telefone (WhatsApp) ou CPF cadastrado no momento da compra:</p>
+
+      <form id="searchForm" class="flex flex-col sm:flex-row gap-2">
+        <input 
+          type="text" 
+          id="searchInput" 
+          required 
+          placeholder="Ex: (11) 99999-9999 ou CPF"
+          class="flex-1 px-4 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+        />
+        <button 
+          type="submit" 
+          id="btnSearch" 
+          class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-6 py-3 rounded-xl transition-all text-sm flex items-center justify-center gap-2 shadow-sm"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          Consultar
+        </button>
+      </form>
+    </div>
+
+    <!-- Resultados -->
+    <div id="resultsContainer" class="space-y-4">
+      <div id="loadingState" class="text-center py-12 text-slate-400 hidden">
+        <svg class="animate-spin h-6 w-6 text-emerald-600 mx-auto mb-2" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        Buscando seus bilhetes...
+      </div>
+
+      <div id="emptyState" class="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200 hidden">
+        <span class="text-4xl block mb-2">🔍</span>
+        <h3 class="font-bold text-slate-700 text-sm">Nenhum bilhete encontrado</h3>
+        <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Verifique se o telefone ou CPF foi digitado corretamente ou faça sua primeira compra.</p>
+        <a href="/" class="inline-block mt-4 text-xs font-bold text-emerald-600 hover:underline">
+          Participar da Rifa agora →
+        </a>
+      </div>
+
+      <div id="ordersList" class="space-y-4"></div>
+    </div>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400 mt-auto">
+    <p>🎗️ Rifa Beneficente Solidária • Transparência e Segurança</p>
+  </footer>
+
+  <script>
+    const form = document.getElementById('searchForm');
+    const input = document.getElementById('searchInput');
+    const ordersList = document.getElementById('ordersList');
+    const loadingState = document.getElementById('loadingState');
+    const emptyState = document.getElementById('emptyState');
+
+    function formatCurrency(v) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+    }
+
+    function formatDate(d) {
+      if (!d) return '';
+      return new Date(d).toLocaleString('pt-BR');
+    }
+
+    async function doSearch(query) {
+      if (!query || query.trim().length < 3) return;
+
+      loadingState.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+      ordersList.innerHTML = '';
+
+      try {
+        const res = await fetch(`/api/my-tickets?search=${encodeURIComponent(query)}`);
+        const data = await res.json();
+
+        loadingState.classList.add('hidden');
+
+        if (!data.orders || data.orders.length === 0) {
+          emptyState.classList.remove('hidden');
+          return;
+        }
+
+        data.orders.forEach(order => {
+          const card = document.createElement('div');
+          card.className = 'bg-white rounded-3xl p-5 border border-slate-200 shadow-sm transition-all';
+
+          let statusBadge = '';
+          if (order.status === 'paid') {
+            statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">✓ Pago e Confirmado</span>`;
+          } else if (order.status === 'pending') {
+            statusBadge = `<span class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">⏳ Aguardando PIX</span>`;
+          } else {
+            statusBadge = `<span class="bg-rose-100 text-rose-800 text-xs font-bold px-3 py-1 rounded-full">Expirado / Cancelado</span>`;
+          }
+
+          const numbersBadges = order.selected_numbers.map(n => 
+            `<span class="bg-emerald-600 text-white font-extrabold px-2.5 py-1 rounded-lg text-sm">${n}</span>`
+          ).join(' ');
+
+          card.innerHTML = `
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-3">
+              <div>
+                <span class="text-xs text-slate-400 block font-semibold">Comprador</span>
+                <span class="text-sm font-bold text-slate-900">${order.customer_name}</span>
+              </div>
+              <div>${statusBadge}</div>
+            </div>
+
+            <div class="mb-4">
+              <span class="text-xs text-slate-500 font-bold uppercase tracking-wider block mb-2">Cotas Adquiridas:</span>
+              <div class="flex flex-wrap gap-1.5">
+                ${numbersBadges}
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 border-t border-slate-100 pt-3">
+              <div>
+                <span>Valor: <strong class="text-slate-800 font-bold">${formatCurrency(order.total_amount)}</strong></span>
+                <span class="mx-2">•</span>
+                <span>Data: ${formatDate(order.created_at)}</span>
+              </div>
+              <div>
+                ${order.status === 'paid' ? `
+                  <span class="text-emerald-700 font-bold flex items-center gap-1">
+                    💚 Participando do sorteio
+                  </span>
+                ` : ''}
+              </div>
+            </div>
+          `;
+
+          ordersList.appendChild(card);
+        });
+
+      } catch (err) {
+        loadingState.classList.add('hidden');
+        alert('Erro ao buscar bilhetes: ' + err.message);
+      }
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      doSearch(input.value.trim());
+    });
+
+    // Auto-search via URL query param (?search=11999998888)
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchParam = urlParams.get('search');
+      if (searchParam) {
+        input.value = searchParam;
+        doSearch(searchParam);
+      }
+    });
+  </script>
+</body>
+</html>

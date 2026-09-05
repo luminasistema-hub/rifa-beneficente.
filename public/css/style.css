@@ -1,0 +1,137 @@
+/* Estilos customizados para a Rifa Beneficente - Otimizados para Celular & Desktop */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+  overflow-x: hidden;
+  padding-bottom: calc(5.5rem + var(--safe-bottom));
+}
+
+/* Evita o zoom involuntário no iOS Safari ao focar em inputs */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Scrollbars modernos e discretos */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Botões da grade de cotas na tela do celular */
+.number-btn {
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  touch-action: manipulation;
+  min-height: 44px; /* Altura ideal de toque no celular */
+}
+.number-btn:active {
+  transform: scale(0.90);
+}
+
+.number-available {
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1.5px solid #e2e8f0;
+}
+.number-available:hover, .number-available:active {
+  border-color: #10b981;
+  color: #047857;
+  background-color: #ecfdf5;
+}
+
+.number-selected {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border-color: #047857 !important;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+  transform: scale(1.02);
+}
+
+.number-reserved {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1.5px solid #fde68a;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.number-paid {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1.5px solid #fecaca;
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* Banner beneficente com degradê suave */
+.gradient-banner {
+  background: linear-gradient(145deg, #064e3b 0%, #047857 55%, #059669 100%);
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+}
+
+/* Animação suave de abertura tipo Bottom Sheet no celular */
+@keyframes sheetSlideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-sheet {
+  animation: sheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Barra inferior flutuante com suporte a área segura (Safe Area) de celulares modernos */
+.safe-bottom-bar {
+  padding-bottom: calc(0.85rem + var(--safe-bottom));
+}

@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Painel Administrativo - Rifa Beneficente</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="min-h-screen flex flex-col bg-slate-100 text-slate-800">
+
+  <!-- MODAL DE LOGIN ADMIN (se não estiver autenticado) -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl border border-slate-200 text-center">
+      <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto text-3xl mb-3 shadow-inner">
+        🔐
+      </div>
+      <h2 class="text-xl font-black text-slate-900">Painel do Administrador</h2>
+      <p class="text-xs text-slate-500 mb-6">Digite sua senha para gerenciar pedidos, realizar sorteios e configurar a rifa.</p>
+
+      <form id="loginForm" class="space-y-3">
+        <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200 text-left flex items-center gap-2">
+          <span class="text-xs text-slate-400">👤</span>
+          <span class="text-xs font-semibold text-slate-700 truncate" id="adminUserEmail">diogoalbuquerque38@gmail.com</span>
+        </div>
+        <input 
+          type="password" 
+          id="adminPasswordInput" 
+          placeholder="Digite sua senha" 
+          required 
+          class="w-full px-4 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center font-bold"
+        />
+        <button 
+          type="submit" 
+          class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl transition-all text-sm shadow-md"
+        >
+          Entrar no Sistema
+        </button>
+      </form>
+      <p id="loginError" class="text-xs text-rose-600 font-bold mt-2 hidden">Senha incorreta.</p>
+      <p class="text-[11px] text-slate-400 mt-4">Autenticação integrada com o Supabase Auth</p>
+    </div>
+  </div>
+
+  <!-- CONTEÚDO PRINCIPAL DO PAINEL ADMIN -->
+  <div id="adminApp" class="hidden flex-grow flex flex-col">
+    
+    <!-- Barra Superior Fixa -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/" class="text-2xl hover:opacity-80 transition-opacity">🎗️</a>
+          <div>
+            <h1 class="font-extrabold text-slate-900 text-base sm:text-lg leading-tight flex items-center gap-2">
+              <span>Área Administrativa</span>
+              <span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Oficial</span>
+            </h1>
+            <p class="text-xs text-slate-500">Controle financeiro, sorteador & vendas da ação beneficente</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a href="/" target="_blank" class="text-xs font-bold text-slate-700 hover:text-emerald-600 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition-colors flex items-center gap-1.5">
+            <span>Ver Rifa Pública</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+          </a>
+          <button id="btnLogout" class="text-xs font-bold text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-xl transition-colors">
+            Sair
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Submenu de Navegação em Abas -->
+    <div class="bg-white border-b border-slate-200 shadow-sm sticky top-[61px] z-20">
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 flex gap-1 sm:gap-2 overflow-x-auto text-xs sm:text-sm font-bold no-scrollbar">
+        <button type="button" data-tab="tab-dashboard" class="tab-btn py-3.5 px-4 border-b-2 border-emerald-600 text-emerald-700 whitespace-nowrap flex items-center gap-1.5">
+          <span>📊</span> Visão Geral & Pedidos
+        </button>
+        <button type="button" data-tab="tab-manual-sale" class="tab-btn py-3.5 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-900 whitespace-nowrap flex items-center gap-1.5">
+          <span>💵</span> Venda Manual (Presencial)
+        </button>
+        <button type="button" data-tab="tab-numbers-map" class="tab-btn py-3.5 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-900 whitespace-nowrap flex items-center gap-1.5">
+          <span>🗺️</span> Mapa dos 601 Números
+        </button>
+        <button type="button" data-tab="tab-draw" class="tab-btn py-3.5 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-900 whitespace-nowrap flex items-center gap-1.5">
+          <span>🎰</span> Sorteador Oficial
+        </button>
+        <button type="button" data-tab="tab-settings" class="tab-btn py-3.5 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-900 whitespace-nowrap flex items-center gap-1.5">
+          <span>🔧</span> Configurações & APIs
+        </button>
+      </div>
+    </div>
+
+    <!-- Conteúdo Dinâmico das Abas -->
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow">
+
+      <!-- ==================================================== -->
+      <!-- ABA 1: VISÃO GERAL & HISTÓRICO DE PEDIDOS -->
+      <!-- ==================================================== -->
+      <div id="tab-dashboard" class="tab-content space-y-6">
+
+        <!-- 4 Cards de Métricas Principais -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400 uppercase">Total Arrecadado</span>
+              <span class="p-2 bg-emerald-50 text-emerald-600 rounded-xl text-lg">💰</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black text-emerald-600" id="metricTotalRaised">R$ 0,00</div>
+            <span class="text-xs text-slate-400 font-medium" id="metricTarget">Meta: R$ 0,00</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400 uppercase">Cotas Pagas</span>
+              <span class="p-2 bg-blue-50 text-blue-600 rounded-xl text-lg">🎟️</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black text-slate-900" id="metricPaid">0 / 601</div>
+            <span class="text-xs text-emerald-600 font-bold" id="metricPercent">0% vendido</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400 uppercase">Aguardando PIX</span>
+              <span class="p-2 bg-amber-50 text-amber-600 rounded-xl text-lg">⏳</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black text-amber-600" id="metricReserved">0</div>
+            <span class="text-xs text-slate-400 font-medium">Reservadas temporariamente</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400 uppercase">Cotas Livres</span>
+              <span class="p-2 bg-purple-50 text-purple-600 rounded-xl text-lg">✨</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black text-slate-700" id="metricAvailable">601</div>
+            <span class="text-xs text-slate-400 font-medium">Prontas para venda</span>
+          </div>
+        </div>
+
+        <!-- Tabela de Pedidos e Compradores -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 class="font-black text-slate-900 text-base sm:text-lg">Participantes e Compras</h3>
+              <p class="text-xs text-slate-400">Todos os pedidos realizados via PIX ou presencial</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+              <!-- Filtro de Status -->
+              <select id="filterOrderStatus" class="px-3 py-2 text-xs rounded-xl border border-slate-300 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="all">Todos os Status</option>
+                <option value="paid">Apenas Pagos</option>
+                <option value="pending">Apenas Aguardando PIX</option>
+                <option value="cancelled">Cancelados / Expirados</option>
+              </select>
+
+              <!-- Busca de texto -->
+              <input 
+                type="text" 
+                id="searchOrdersInput" 
+                placeholder="Buscar por nome, WhatsApp ou cota..." 
+                class="px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 flex-1 sm:w-60"
+              />
+
+              <!-- Botão Exportar CSV -->
+              <button id="btnExportCSV" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm" title="Baixar planilha para Excel">
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Exportar Excel (CSV)
+              </button>
+
+              <button id="btnRefreshOrders" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 text-xs font-bold transition-colors" title="Atualizar dados">
+                🔄
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+              <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase tracking-wider">
+                <tr>
+                  <th class="p-4">Data / Hora</th>
+                  <th class="p-4">Comprador</th>
+                  <th class="p-4">WhatsApp / CPF</th>
+                  <th class="p-4">Cotas Compradas</th>
+                  <th class="p-4">Valor Total</th>
+                  <th class="p-4">Status</th>
+                  <th class="p-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody" class="divide-y divide-slate-100 font-medium">
+                <!-- Preenchido via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- ABA 2: VENDA MANUAL / PRESENCIAL -->
+      <!-- ==================================================== -->
+      <div id="tab-manual-sale" class="tab-content hidden space-y-6 max-w-2xl mx-auto">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
+          <div class="flex items-center gap-3 mb-4 border-b border-slate-100 pb-4">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl font-bold">
+              💵
+            </div>
+            <div>
+              <h3 class="text-lg font-black text-slate-900">Registrar Venda Presencial</h3>
+              <p class="text-xs text-slate-500">Cadastre vendas pagas em dinheiro em mãos ou transferência direta</p>
+            </div>
+          </div>
+
+          <form id="manualSaleForm" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Nome Completo do Comprador *</label>
+              <input type="text" id="manualName" required placeholder="Ex: Maria Santos" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">WhatsApp (com DDD) *</label>
+                <input type="tel" id="manualPhone" required placeholder="(11) 99999-8888" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">CPF (Opcional)</label>
+                <input type="text" id="manualCpf" placeholder="000.000.000-00" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium" />
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-bold text-slate-700">Números Escolhidos *</label>
+                <button type="button" id="btnOpenNumberPicker" class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-3 py-1 rounded-xl flex items-center gap-1.5 transition-all shadow-sm">
+                  <span>🔢</span> Escolher Cotas Livres
+                </button>
+              </div>
+              <input type="text" id="manualNumbers" required placeholder="Ex: 015, 042, 100" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold" />
+              <p class="text-[11px] text-slate-400 mt-1">Digite os números ou clique em <strong>Escolher Cotas Livres</strong> para selecionar na grade interativa.</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Forma de Pagamento</label>
+              <select id="manualPaymentMethod" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 font-bold">
+                <option value="dinheiro_em_maos">Dinheiro em mãos</option>
+                <option value="pix_direto">PIX Direto na conta bancária</option>
+                <option value="cartao_maquininha">Cartão na Maquininha</option>
+                <option value="cortesia_doacao">Cortesia / Doação Especial</option>
+              </select>
+            </div>
+
+            <button type="submit" id="btnSubmitManualSale" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-xl shadow-md transition-all text-sm mt-2 flex items-center justify-center gap-2">
+              <span>Confirmar Venda e Bloquear Cotas</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- ABA 3: MAPA DOS 601 NÚMEROS (INSPEÇÃO) -->
+      <!-- ==================================================== -->
+      <div id="tab-numbers-map" class="tab-content hidden space-y-6">
+        <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="font-black text-slate-900 text-base sm:text-lg">Mapa Geral das 601 Cotas (000 a 600)</h3>
+              <p class="text-xs text-slate-500">Passe o mouse ou clique em qualquer número para inspecionar os detalhes do comprador</p>
+            </div>
+            <div class="flex items-center gap-4 text-xs font-semibold">
+              <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-white border border-slate-300"></span> Livre</span>
+              <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-amber-100 border border-amber-300"></span> Reservado</span>
+              <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded bg-rose-100 border border-rose-300"></span> Pago</span>
+            </div>
+          </div>
+
+          <div id="adminNumbersGrid" class="grid grid-cols-6 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-15 gap-1.5 max-h-[600px] overflow-y-auto p-2 bg-slate-50 rounded-2xl border border-slate-200">
+            <!-- Grade gerada via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- ABA 4: SORTEADOR OFICIAL TRANSPARENTE -->
+      <!-- ==================================================== -->
+      <div id="tab-draw" class="tab-content hidden space-y-6">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm text-center max-w-xl mx-auto">
+          <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-3xl mb-3 shadow-inner">
+            🎰
+          </div>
+          <h2 class="text-2xl font-black text-slate-900">Sorteador Oficial da Rifa</h2>
+          <p class="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-6">
+            O sorteio é realizado de forma 100% transparente e aleatória apenas entre as cotas confirmadas com pagamento aprovado.
+          </p>
+
+          <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-6">
+            <span class="text-xs font-bold text-slate-500 block mb-1">Cotas Concorrendo no Sorteio:</span>
+            <span id="drawEligibleCount" class="text-3xl font-black text-emerald-600">0</span>
+            <span class="text-xs text-slate-400 block mt-0.5">números pagos no sistema</span>
+          </div>
+
+          <!-- Roleta Digital Animada -->
+          <div class="my-6">
+            <div id="drawDisplay" class="h-28 bg-slate-900 text-emerald-400 font-black text-6xl rounded-2xl flex items-center justify-center tracking-widest font-mono shadow-2xl border-4 border-slate-800">
+              000
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            id="btnTriggerDraw" 
+            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-base shadow-lg transition-all flex items-center justify-center gap-2"
+          >
+            🎲 Girar Roleta e Sortear Vencedor
+          </button>
+
+          <!-- Cartão do Vencedor -->
+          <div id="winnerCard" class="mt-6 p-5 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-left hidden">
+            <span class="text-xs font-bold text-emerald-800 uppercase tracking-wider block mb-1">🏆 Grande Ganhador(a)!</span>
+            <div class="text-xl font-black text-slate-900" id="winnerName">-</div>
+            <div class="text-xs text-slate-600 mt-1">
+              WhatsApp: <strong id="winnerPhone" class="text-slate-800">-</strong>
+            </div>
+            <div class="text-xs text-slate-600 mt-0.5">
+              Cota Sorteada: <strong class="text-emerald-700 text-base font-black" id="winnerNumber">-</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- ABA 5: CONFIGURAÇÕES E APIS -->
+      <!-- ==================================================== -->
+      <div id="tab-settings" class="tab-content hidden space-y-6 max-w-3xl mx-auto">
+        <form id="settingsForm" class="space-y-6">
+
+          <!-- Configurações Gerais da Rifa -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+              <span>🎗️</span> Dados da Rifa Beneficente
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Título da Ação Beneficente</label>
+                <input type="text" id="cfgTitle" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-medium" />
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Descrição / Causa Solidária</label>
+                <textarea id="cfgDescription" rows="3" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-medium"></textarea>
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Prêmio a ser Sorteado</label>
+                <input type="text" id="cfgPrize" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-medium" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Valor por Cota (R$)</label>
+                <input type="number" step="0.01" id="cfgPrice" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-bold text-emerald-700" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Tempo de Reserva (Minutos)</label>
+                <input type="number" id="cfgTimeout" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-bold" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Integração Asaas (PIX) -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                <span>💳</span> Integração Asaas (PIX Automático)
+              </h3>
+              <span id="asaasStatusBadge" class="text-[11px] font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">Verificando...</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Chave de API do Asaas (API Key)</label>
+                <div class="flex gap-2">
+                  <input type="password" id="cfgAsaasKey" placeholder="$aact_YTU..." class="flex-1 px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-mono" />
+                  <button type="button" id="btnTestAsaas" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 text-xs rounded-xl shadow-sm transition-all whitespace-nowrap">
+                    Testar Chave
+                  </button>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">Obtenha no painel do Asaas em: Minha Conta -> Integrações -> Gerar Chave de API</p>
+                <p id="testAsaasFeedback" class="text-xs mt-1 font-bold hidden"></p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Ambiente do Asaas</label>
+                <select id="cfgAsaasEnv" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-bold">
+                  <option value="production">Produção (Dinheiro Real)</option>
+                  <option value="sandbox">Sandbox (Ambiente de Testes)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Token de Webhook (Opcional)</label>
+                <input type="text" id="cfgAsaasWebhookToken" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-mono" />
+              </div>
+
+              <div class="sm:col-span-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span class="text-xs font-bold text-slate-700 block mb-1">URL para cadastrar o Webhook no Asaas:</span>
+                <code id="webhookUrlDisplay" class="text-xs font-mono text-emerald-700 select-all block bg-white p-2.5 rounded border border-slate-200">
+                  http://localhost:3000/api/webhooks/asaas
+                </code>
+                <p class="text-[11px] text-slate-500 mt-1">Cadastre esta URL na sua conta Asaas e marque os eventos: <code>Cobrança recebida</code> e <code>Cobrança confirmada</code>.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Integração Evolution API (WhatsApp) -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                <span>📱</span> Integração Evolution API (WhatsApp Automático)
+              </h3>
+              <span id="evoStatusBadge" class="text-[11px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Online (v2.3.7)</span>
+            </div>
+            <p class="text-xs text-slate-500">Dispara automaticamente mensagem com comprovante e os números comprados assim que o PIX for confirmado.</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 mb-1">URL da Evolution API</label>
+                <input type="text" id="cfgEvoUrl" placeholder="https://evo2.agenciahigher.com.br" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-mono" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Chave de API (apikey)</label>
+                <input type="password" id="cfgEvoKey" placeholder="Lumina2026" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-mono" />
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-xs font-bold text-slate-700">Instância Conectada</label>
+                  <button type="button" id="btnRefreshInstances" class="text-[11px] text-emerald-600 font-bold hover:underline flex items-center gap-1" title="Atualizar instâncias">
+                    🔄 Atualizar Lista
+                  </button>
+                </div>
+                <select id="cfgEvoInstanceSelect" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-bold bg-white">
+                  <option value="rifasolidária">rifasolidária</option>
+                </select>
+                <input type="hidden" id="cfgEvoInstance" value="rifasolidária" />
+              </div>
+            </div>
+
+            <!-- Painel de Conexão WhatsApp / QR Code -->
+            <div id="instanceConnectionBox" class="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl" id="instanceStatusIcon">📱</span>
+                <div>
+                  <h4 class="font-bold text-xs text-amber-900" id="instanceStatusTitle">Status da Instância</h4>
+                  <p class="text-[11px] text-amber-700" id="instanceStatusDesc">Verificando conexão do WhatsApp...</p>
+                </div>
+              </div>
+              <button type="button" id="btnShowQrCode" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm transition-all whitespace-nowrap">
+                📲 Conectar via QR Code
+              </button>
+            </div>
+
+            <!-- Teste de Disparo WhatsApp -->
+            <div class="border-t border-slate-100 pt-3">
+              <span class="text-xs font-bold text-slate-700 block mb-1">Testar Envio de Mensagem WhatsApp:</span>
+              <div class="flex gap-2">
+                <input type="tel" id="testPhoneInput" placeholder="DDD + Número (ex: 63984861923)" class="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-300 font-medium" />
+                <button type="button" id="btnTestWhatsApp" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2 text-xs rounded-xl transition-all">
+                  Testar Envio
+                </button>
+              </div>
+              <p id="testWhatsAppFeedback" class="text-xs mt-1 font-bold hidden"></p>
+            </div>
+          </div>
+
+          <!-- Card de Teste da Automação Completa -->
+          <div class="bg-emerald-50 rounded-3xl p-6 border border-emerald-200 shadow-sm space-y-3">
+            <h3 class="font-extrabold text-emerald-950 text-base flex items-center gap-2">
+              <span>⚡</span> Testar Automação Completa Ponta a Ponta
+            </h3>
+            <p class="text-xs text-emerald-800">
+              Executa todo o ciclo de automação em 1 segundo: reserva 1 cota livre no banco, confirma o pagamento do PIX e dispara a notificação oficial formatada no WhatsApp.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-2 pt-1">
+              <input type="tel" id="simAutomationPhone" placeholder="Seu WhatsApp com DDD (ex: 63984861923)" class="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-emerald-300 font-bold bg-white" />
+              <button type="button" id="btnRunFullAutomation" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 py-2.5 rounded-xl text-xs shadow-md transition-all whitespace-nowrap flex items-center justify-center gap-1.5">
+                <span>🚀</span> Disparar Teste de Automação
+              </button>
+            </div>
+            <p id="simAutomationFeedback" class="text-xs font-bold mt-1 hidden"></p>
+          </div>
+
+          <!-- Botão Salvar -->
+          <button type="submit" id="btnSaveSettings" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-2xl shadow-md transition-all text-sm">
+            Salvar Todas as Configurações
+          </button>
+        </form>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modal QR Code WhatsApp -->
+  <div id="qrModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl border border-slate-200">
+      <div class="flex justify-between items-center">
+        <h3 class="font-black text-slate-900 text-base">Escanear QR Code WhatsApp</h3>
+        <button type="button" id="btnCloseQrModal" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+      <p class="text-xs text-slate-500">Abra o WhatsApp no celular -> <strong>Aparelhos conectados</strong> -> <strong>Conectar aparelho</strong> e aponte para o código:</p>
+      <div id="qrLoading" class="py-12 text-xs font-bold text-slate-500 flex flex-col items-center gap-2">
+        <span class="animate-spin text-2xl">⏳</span>
+        <span>Gerando QR Code da Evolution API...</span>
+      </div>
+      <img id="qrImageDisplay" class="mx-auto rounded-2xl border border-slate-200 hidden max-w-[240px] shadow-sm" alt="QR Code WhatsApp" />
+      <div id="pairingCodeBox" class="hidden text-xs bg-slate-100 p-2.5 rounded-xl text-slate-700 font-mono select-all break-all"></div>
+      <button type="button" id="btnRefreshQr" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition-colors">
+        🔄 Atualizar QR Code
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL POPUP: SELEÇÃO VISUAL DE COTAS LIVRES (VENDA MANUAL) -->
+  <div id="modalNumberPicker" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white rounded-t-[28px] sm:rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-100 max-h-[92vh] flex flex-col modal-sheet">
+      <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-2 sm:hidden"></div>
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="font-black text-slate-900 text-base sm:text-lg flex items-center gap-2">
+            <span>🔢</span> Escolher Cotas Disponíveis
+          </h3>
+          <p class="text-xs text-slate-500">Clique nas cotas livres para adicionar à venda manual</p>
+        </div>
+        <button type="button" id="btnCloseNumberPicker" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center text-lg font-bold">
+          ✕
+        </button>
+      </div>
+
+      <!-- Barra de Filtro Rápido e Métricas da Seleção -->
+      <div class="py-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 text-xs">
+        <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+          <input 
+            type="text" 
+            id="searchPickerInput" 
+            placeholder="Filtrar cota (ex: 100)..." 
+            class="px-3 py-1.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full max-w-xs font-mono font-bold text-xs"
+          />
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-slate-500">Disponíveis: <strong id="pickerFreeCount" class="text-emerald-700">0</strong></span>
+          <span class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-black text-xs" id="pickerSelectedCount">0 selecionadas</span>
+        </div>
+      </div>
+
+      <!-- Grade Scrollável de Cotas Livres -->
+      <div id="pickerGrid" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1.5 overflow-y-auto py-3 my-2 flex-grow max-h-[380px] p-2 bg-slate-50 rounded-2xl border border-slate-200">
+        <!-- Preenchido via JS apenas com cotas livres -->
+      </div>
+
+      <!-- Ações do Modal -->
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+        <button type="button" id="btnPickerClear" class="text-xs font-bold text-rose-600 hover:underline">
+          Limpar Seleção
+        </button>
+        <button type="button" id="btnPickerConfirm" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition-all">
+          Confirmar Seleção (<span id="pickerConfirmCount">0</span>)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const adminState = {
+      token: localStorage.getItem('rifa_admin_token') || '',
+      orders: [],
+      settings: {},
+      numbersMap: []
+    };
+
+    function formatCurrency(v) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+    }
+
+    function formatDate(d) {
+      if (!d) return '-';
+      return new Date(d).toLocaleString('pt-BR');
+    }
+
+    // Login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pwd = document.getElementById('adminPasswordInput').value;
+      const errEl = document.getElementById('loginError');
+      errEl.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pwd, email: 'diogoalbuquerque38@gmail.com' })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          adminState.token = data.token;
+          localStorage.setItem('rifa_admin_token', data.token);
+          document.getElementById('loginModal').classList.add('hidden');
+          document.getElementById('adminApp').classList.remove('hidden');
+          loadAdminDashboard();
+        } else {
+          errEl.textContent = data.error || 'Senha incorreta.';
+          errEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        alert('Erro ao autenticar: ' + err.message);
+      }
+    });
+
+    // Logout
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      adminState.token = '';
+      localStorage.removeItem('rifa_admin_token');
+      document.getElementById('adminApp').classList.add('hidden');
+      document.getElementById('loginModal').classList.remove('hidden');
+      const input = document.getElementById('adminPasswordInput');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    });
+
+    // Alternar Abas
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('border-emerald-600', 'text-emerald-700');
+          b.classList.add('border-transparent', 'text-slate-500');
+        });
+        btn.classList.add('border-emerald-600', 'text-emerald-700');
+        btn.classList.remove('border-transparent', 'text-slate-500');
+
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        const tabEl = document.getElementById(btn.dataset.tab);
+        if (tabEl) tabEl.classList.remove('hidden');
+
+        if (btn.dataset.tab === 'tab-numbers-map') {
+          loadNumbersMap();
+        }
+      });
+    });
+
+    // Carregar Dados Principais do Painel
+    async function loadAdminDashboard() {
+      try {
+        const res = await fetch('/api/admin/dashboard', {
+          headers: { 'Authorization': `Bearer ${adminState.token}` }
+        });
+
+        if (res.status === 401) {
+          localStorage.removeItem('rifa_admin_token');
+          document.getElementById('loginModal').classList.remove('hidden');
+          document.getElementById('adminApp').classList.add('hidden');
+          return;
+        }
+
+        const data = await res.json();
+        adminState.orders = data.orders;
+        adminState.settings = data.settings;
+
+        // Métricas
+        document.getElementById('metricTotalRaised').textContent = formatCurrency(data.stats.totalRaised);
+        document.getElementById('metricTarget').textContent = `Meta: ${formatCurrency(data.stats.targetAmount)}`;
+        document.getElementById('metricPaid').textContent = `${data.stats.paid} / ${data.stats.totalNumbers}`;
+        document.getElementById('metricPercent').textContent = `${data.stats.percentSold}% vendido`;
+        document.getElementById('metricReserved').textContent = data.stats.reserved;
+        document.getElementById('metricAvailable').textContent = data.stats.available;
+        document.getElementById('drawEligibleCount').textContent = data.stats.paid;
+
+        // Webhook URL
+        document.getElementById('webhookUrlDisplay').textContent = `${window.location.origin}/api/webhooks/asaas`;
+
+        // Preenche Configurações
+        document.getElementById('cfgTitle').value = data.settings.title || '';
+        document.getElementById('cfgDescription').value = data.settings.description || '';
+        document.getElementById('cfgPrize').value = data.settings.prize || '';
+        document.getElementById('cfgPrice').value = data.settings.price_per_number || 10;
+        document.getElementById('cfgTimeout').value = data.settings.reservation_timeout_minutes || 15;
+        document.getElementById('cfgAsaasEnv').value = data.settings.asaas_environment || 'production';
+        document.getElementById('cfgEvoUrl').value = data.settings.evolution_api_url || '';
+        document.getElementById('cfgEvoInstance').value = data.settings.evolution_instance || 'rifasolidária';
+
+        // Atualiza Badges
+        const asaasBadge = document.getElementById('asaasStatusBadge');
+        if (data.settings.asaas_api_key_configured) {
+          asaasBadge.className = 'text-[11px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800';
+          asaasBadge.textContent = `Configurado (${data.settings.asaas_environment || 'sandbox'})`;
+        } else {
+          asaasBadge.className = 'text-[11px] font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-800';
+          asaasBadge.textContent = 'Modo Simulado (Insira sua Chave)';
+        }
+
+        // Carrega instâncias ativas da Evolution API
+        loadEvolutionInstances();
+
+        applyOrdersFilter();
+      } catch (err) {
+        console.error('Erro ao carregar painel:', err);
+      }
+    }
+
+    // Filtrar Pedidos na Tabela
+    function applyOrdersFilter() {
+      const statusFilter = document.getElementById('filterOrderStatus').value;
+      const q = document.getElementById('searchOrdersInput').value.toLowerCase().trim();
+
+      const filtered = adminState.orders.filter(order => {
+        if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+        if (!q) return true;
+
+        const nameMatch = order.customer_name && order.customer_name.toLowerCase().includes(q);
+        const phoneMatch = order.customer_phone && order.customer_phone.includes(q);
+        const numbersMatch = order.selected_numbers && order.selected_numbers.some(n => n.includes(q));
+        return nameMatch || phoneMatch || numbersMatch;
+      });
+
+      renderOrdersTable(filtered);
+    }
+
+    // Renderizar Tabela
+    function renderOrdersTable(orders) {
+      const tbody = document.getElementById('ordersTableBody');
+      tbody.innerHTML = '';
+
+      if (!orders || orders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Nenhum pedido encontrado.</td></tr>`;
+        return;
+      }
+
+      orders.forEach(order => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition-colors';
+
+        let badge = '';
+        if (order.status === 'paid') {
+          badge = '<span class="bg-emerald-100 text-emerald-800 text-[11px] font-black px-2.5 py-1 rounded-full">✓ Pago</span>';
+        } else if (order.status === 'pending') {
+          badge = '<span class="bg-amber-100 text-amber-800 text-[11px] font-black px-2.5 py-1 rounded-full">⏳ Aguardando PIX</span>';
+        } else {
+          badge = '<span class="bg-rose-100 text-rose-800 text-[11px] font-bold px-2.5 py-1 rounded-full">Cancelado / Expirado</span>';
+        }
+
+        const numbersText = (order.selected_numbers || []).join(', ');
+
+        tr.innerHTML = `
+          <td class="p-4 whitespace-nowrap text-slate-500">${formatDate(order.created_at)}</td>
+          <td class="p-4 font-bold text-slate-900">${order.customer_name}</td>
+          <td class="p-4 whitespace-nowrap">
+            <div class="font-bold">${order.customer_phone}</div>
+            <div class="text-[11px] text-slate-400">${order.customer_cpf}</div>
+          </td>
+          <td class="p-4 font-extrabold text-emerald-700 max-w-xs truncate" title="${numbersText}">
+            ${numbersText}
+          </td>
+          <td class="p-4 font-black text-slate-900 whitespace-nowrap">${formatCurrency(order.total_amount)}</td>
+          <td class="p-4 whitespace-nowrap">${badge}</td>
+          <td class="p-4 text-right whitespace-nowrap">
+            ${order.status === 'pending' ? `
+              <button onclick="confirmPaymentManual('${order.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs mr-1 shadow-sm">
+                Baixar
+              </button>
+              <button onclick="cancelOrderManual('${order.id}')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm">
+                Liberar
+              </button>
+            ` : order.status === 'paid' ? `
+              <span class="text-xs text-emerald-600 font-bold">✓ Confirmado</span>
+            ` : '-'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Baixa Manual de Pagamento (aprovar pedido pendente)
+    window.confirmPaymentManual = async function(orderId) {
+      if (!confirm('Deseja confirmar o pagamento deste pedido manualmente?\n\nAs cotas serão marcadas como PAGAS e a mensagem de comprovante será disparada no WhatsApp.')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/admin/orders/${orderId}/confirm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminState.token}`
+          }
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Erro ao confirmar pagamento.');
+        }
+
+        alert('✓ Pagamento baixado com sucesso! Cotas confirmadas.');
+        await loadAdminDashboard();
+      } catch (err) {
+        alert('Erro ao baixar pagamento: ' + err.message);
+      }
+    };
+
+    // Liberar Cotas / Cancelar Pedido Pendente
+    window.cancelOrderManual = async function(orderId) {
+      if (!confirm('Deseja realmente cancelar este pedido e LIBERAR as cotas de volta para a rifa?')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/admin/orders/${orderId}/cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminState.token}`
+          }
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Erro ao liberar pedido.');
+        }
+
+        alert('✓ Pedido cancelado e cotas liberadas para venda!');
+        await loadAdminDashboard();
+      } catch (err) {
+        alert('Erro ao liberar cotas: ' + err.message);
+      }
+    };
+
+    // Carregar Mapa de Números
+    async function loadNumbersMap() {
+      const grid = document.getElementById('adminNumbersGrid');
+      grid.innerHTML = '<div class="col-span-full py-8 text-center text-slate-400 text-xs">Carregando dados das cotas...</div>';
+
+      try {
+        const res = await fetch('/api/admin/numbers-map', {
+          headers: { 'Authorization': `Bearer ${adminState.token}` }
+        });
+        const data = await res.json();
+        adminState.numbersMap = data.numbers;
+
+        grid.innerHTML = '';
+        data.numbers.forEach(item => {
+          const btn = document.createElement('div');
+          let colorClass = 'bg-white text-slate-800 border-slate-200';
+          if (item.status === 'paid') {
+            colorClass = 'bg-rose-100 text-rose-900 border-rose-300 font-black';
+          } else if (item.status === 'reserved') {
+            colorClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+          }
+
+          btn.className = `p-2 rounded-lg border text-center text-xs cursor-pointer hover:scale-105 transition-transform ${colorClass}`;
+          btn.textContent = item.number;
+
+          const title = item.status === 'paid'
+            ? `Cota ${item.number}\nComprador: ${item.buyerName || 'N/A'}\nTelefone: ${item.buyerPhone || 'N/A'}`
+            : item.status === 'reserved'
+            ? `Cota ${item.number} (Aguardando PIX)`
+            : `Cota ${item.number} (Livre)`;
+          btn.title = title;
+
+          btn.addEventListener('click', () => {
+            if (item.buyerName) {
+              alert(`Informações da Cota ${item.number}:\n\nComprador: ${item.buyerName}\nTelefone: ${item.buyerPhone}\nStatus: ${item.status.toUpperCase()}`);
+            } else {
+              alert(`Cota ${item.number} está LIVRE para compra!`);
+            }
+          });
+
+          grid.appendChild(btn);
+        });
+      } catch (err) {
+        console.error('Erro ao carregar mapa:', err);
+      }
+    }
+
+    // Venda Manual / Presencial
+    document.getElementById('manualSaleForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('manualName').value.trim();
+      const phone = document.getElementById('manualPhone').value.trim();
+      const cpf = document.getElementById('manualCpf').value.trim();
+      const rawNumbers = document.getElementById('manualNumbers').value.trim();
+      const method = document.getElementById('manualPaymentMethod').value;
+
+      const numbersArray = rawNumbers
+        .split(/[,;\s]+/)
+        .map(n => n.trim())
+        .filter(n => n.length > 0)
+        .map(n => String(parseInt(n, 10)).padStart(3, '0'));
+
+      if (numbersArray.length === 0) {
+        alert('Informe ao menos 1 número.');
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitManualSale');
+      btn.disabled = true;
+      btn.textContent = 'Salvando venda...';
+
+      try {
+        const res = await fetch('/api/admin/orders/manual', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminState.token}`
+          },
+          body: JSON.stringify({
+            customerName: name,
+            customerPhone: phone,
+            customerCpf: cpf,
+            selectedNumbers: numbersArray,
+            paymentMethod: method
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Erro ao registrar venda manual.');
+        }
+
+        alert(`✓ Venda registrada com sucesso para ${name}!\nCotas: ${numbersArray.join(', ')}`);
+        document.getElementById('manualSaleForm').reset();
+        loadAdminDashboard();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirmar Venda e Bloquear Cotas';
+      }
+    });
+
+    // ==========================================
+    // POPUP SELETOR DE COTAS LIVRES (VENDA MANUAL)
+    // ==========================================
+    const pickerState = {
+      selected: new Set(),
+      availableNumbers: []
+    };
+
+    async function openNumberPickerModal() {
+      try {
+        const res = await fetch('/api/raffle');
+        const data = await res.json();
+        pickerState.availableNumbers = (data.numbers || []).filter(n => n.status === 'available');
+
+        // Pré-seleciona números que já estiverem digitados no campo
+        pickerState.selected.clear();
+        const currentInput = document.getElementById('manualNumbers').value;
+        if (currentInput) {
+          currentInput.split(/[,;\s]+/)
+            .map(n => n.trim())
+            .filter(n => n.length > 0)
+            .map(n => String(parseInt(n, 10)).padStart(3, '0'))
+            .forEach(n => {
+              if (pickerState.availableNumbers.some(av => av.number === n)) {
+                pickerState.selected.add(n);
+              }
+            });
+        }
+
+        renderPickerGrid();
+        document.getElementById('modalNumberPicker').classList.remove('hidden');
+        setTimeout(() => {
+          document.getElementById('searchPickerInput')?.focus();
+        }, 100);
+      } catch (err) {
+        alert('Erro ao carregar cotas livres: ' + err.message);
+      }
+    }
+
+    function renderPickerGrid() {
+      const grid = document.getElementById('pickerGrid');
+      grid.innerHTML = '';
+      const query = (document.getElementById('searchPickerInput')?.value || '').trim();
+
+      const filtered = pickerState.availableNumbers.filter(n => {
+        if (!query) return true;
+        return n.number.includes(query);
+      });
+
+      document.getElementById('pickerFreeCount').textContent = pickerState.availableNumbers.length;
+      document.getElementById('pickerSelectedCount').textContent = `${pickerState.selected.size} selecionadas`;
+      document.getElementById('pickerConfirmCount').textContent = pickerState.selected.size;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="col-span-full py-8 text-center text-slate-400 text-xs font-bold">Nenhuma cota livre encontrada com este filtro.</div>';
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      filtered.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const isSelected = pickerState.selected.has(item.number);
+
+        btn.className = `p-2.5 rounded-xl border text-xs font-mono font-black transition-all cursor-pointer select-none ${
+          isSelected 
+            ? 'bg-emerald-600 text-white border-emerald-700 shadow-md scale-105 ring-2 ring-emerald-400' 
+            : 'bg-white hover:bg-emerald-50 text-slate-800 border-slate-200 hover:border-emerald-300 active:scale-95'
+        }`;
+        btn.textContent = item.number;
+
+        btn.addEventListener('click', () => {
+          if (pickerState.selected.has(item.number)) {
+            pickerState.selected.delete(item.number);
+          } else {
+            pickerState.selected.add(item.number);
+          }
+          renderPickerGrid();
+        });
+
+        fragment.appendChild(btn);
+      });
+
+      grid.appendChild(fragment);
+    }
+
+    // Eventos do seletor
+    document.getElementById('btnOpenNumberPicker').addEventListener('click', openNumberPickerModal);
+    document.getElementById('btnCloseNumberPicker').addEventListener('click', () => {
+      document.getElementById('modalNumberPicker').classList.add('hidden');
+    });
+    document.getElementById('searchPickerInput').addEventListener('input', renderPickerGrid);
+    document.getElementById('btnPickerClear').addEventListener('click', () => {
+      pickerState.selected.clear();
+      renderPickerGrid();
+    });
+    document.getElementById('btnPickerConfirm').addEventListener('click', () => {
+      const sorted = Array.from(pickerState.selected).sort((a, b) => Number(a) - Number(b));
+      document.getElementById('manualNumbers').value = sorted.join(', ');
+      document.getElementById('modalNumberPicker').classList.add('hidden');
+    });
+
+    // Baixar Planilha Excel / CSV
+    document.getElementById('btnExportCSV').addEventListener('click', () => {
+      fetch('/api/admin/export-csv', {
+        headers: { 'Authorization': `Bearer ${adminState.token}` }
+      })
+      .then(res => res.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `participantes_rifa_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      })
+      .catch(err => alert('Erro ao baixar CSV: ' + err.message));
+    });
+
+    // Sorteador
+    document.getElementById('btnTriggerDraw').addEventListener('click', async () => {
+      const display = document.getElementById('drawDisplay');
+      const winnerCard = document.getElementById('winnerCard');
+      winnerCard.classList.add('hidden');
+
+      try {
+        let counter = 0;
+        const interval = setInterval(() => {
+          const rand = Math.floor(Math.random() * 601);
+          display.textContent = String(rand).padStart(3, '0');
+          counter++;
+          if (counter > 30) clearInterval(interval);
+        }, 80);
+
+        const res = await fetch('/api/admin/draw', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${adminState.token}` }
+        });
+        const data = await res.json();
+
+        setTimeout(() => {
+          clearInterval(interval);
+          if (!res.ok) {
+            alert(data.error || 'Erro ao sortear');
+            return;
+          }
+
+          display.textContent = data.winningNumber;
+          if (typeof confetti === 'function') {
+            confetti({ particleCount: 150, spread: 80 });
+          }
+
+          winnerCard.classList.remove('hidden');
+          document.getElementById('winnerName').textContent = data.winner.name;
+          document.getElementById('winnerPhone').textContent = data.winner.phone;
+          document.getElementById('winnerNumber').textContent = data.winningNumber;
+        }, 2600);
+      } catch (err) {
+        alert('Erro ao sortear: ' + err.message);
+      }
+    });
+
+    // Salvar Configurações
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        title: document.getElementById('cfgTitle').value,
+        description: document.getElementById('cfgDescription').value,
+        prize: document.getElementById('cfgPrize').value,
+        price_per_number: parseFloat(document.getElementById('cfgPrice').value),
+        reservation_timeout_minutes: parseInt(document.getElementById('cfgTimeout').value, 10),
+        asaas_environment: document.getElementById('cfgAsaasEnv').value,
+        evolution_api_url: document.getElementById('cfgEvoUrl').value,
+        evolution_instance: document.getElementById('cfgEvoInstance').value
+      };
+
+      const asaasKey = document.getElementById('cfgAsaasKey').value;
+      if (asaasKey && asaasKey.trim()) payload.asaas_api_key = asaasKey.trim();
+
+      const evoKey = document.getElementById('cfgEvoKey').value;
+      if (evoKey && evoKey.trim()) payload.evolution_api_key = evoKey.trim();
+
+      try {
+        const res = await fetch('/api/admin/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminState.token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          alert('Configurações salvas com sucesso!');
+          loadAdminDashboard();
+        } else {
+          const err = await res.json();
+          alert('Erro ao salvar: ' + err.error);
+        }
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    // Carregar e monitorar instâncias da Evolution API
+    let evolutionInstancesCache = [];
+
+    async function loadEvolutionInstances() {
+      const select = document.getElementById('cfgEvoInstanceSelect');
+      const hiddenInput = document.getElementById('cfgEvoInstance');
+
+      try {
+        const res = await fetch('/api/admin/evolution/instances', {
+          headers: { 'Authorization': `Bearer ${adminState.token}` }
+        });
+        const data = await res.json();
+        if (!res.ok || !data.instances) {
+          throw new Error(data.error || 'Falha ao consultar instâncias');
+        }
+
+        evolutionInstancesCache = data.instances;
+        select.innerHTML = '';
+        const currentTarget = hiddenInput.value || 'rifasolidária';
+
+        data.instances.forEach(inst => {
+          const opt = document.createElement('option');
+          opt.value = inst.name;
+          const statusTxt = inst.status === 'open' ? '🟢 Conectada' : inst.status === 'connecting' ? '🟡 Conectando' : '🔴 Desconectada';
+          opt.textContent = `${inst.name} (${statusTxt})`;
+          if (inst.name === currentTarget) opt.selected = true;
+          select.appendChild(opt);
+        });
+
+        if (!data.instances.some(i => i.name === currentTarget)) {
+          const opt = document.createElement('option');
+          opt.value = currentTarget;
+          opt.textContent = `${currentTarget} (Configurada)`;
+          opt.selected = true;
+          select.appendChild(opt);
+        }
+
+        updateInstanceStatusUI(select.value);
+      } catch (err) {
+        console.warn('Erro ao carregar instâncias Evolution:', err);
+      }
+    }
+
+    function updateInstanceStatusUI(selectedName) {
+      const icon = document.getElementById('instanceStatusIcon');
+      const title = document.getElementById('instanceStatusTitle');
+      const desc = document.getElementById('instanceStatusDesc');
+      const box = document.getElementById('instanceConnectionBox');
+      const btnQr = document.getElementById('btnShowQrCode');
+
+      const found = evolutionInstancesCache.find(i => i.name === selectedName);
+      if (!found) {
+        box.className = 'bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3';
+        icon.textContent = 'ℹ️';
+        title.textContent = selectedName;
+        desc.textContent = 'Instância configurada manualmente.';
+        btnQr.classList.remove('hidden');
+        return;
+      }
+
+      if (found.status === 'open') {
+        box.className = 'bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3';
+        icon.textContent = '🟢';
+        title.textContent = `${found.name} (Pronta para Envios)`;
+        desc.textContent = `Conectada com sucesso ao WhatsApp! ${found.profileName ? 'Perfil: ' + found.profileName : ''}`;
+        btnQr.classList.add('hidden');
+      } else {
+        box.className = 'bg-amber-50 border border-amber-200 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3';
+        icon.textContent = '🟡';
+        title.textContent = `${found.name} (Aguardando Conexão)`;
+        desc.textContent = 'Esta instância ainda não está conectada ao WhatsApp. Clique para escanear o QR Code.';
+        btnQr.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('cfgEvoInstanceSelect').addEventListener('change', (e) => {
+      document.getElementById('cfgEvoInstance').value = e.target.value;
+      updateInstanceStatusUI(e.target.value);
+    });
+
+    document.getElementById('btnRefreshInstances').addEventListener('click', () => {
+      loadEvolutionInstances();
+    });
+
+    // Modal QR Code Evolution
+    async function showInstanceQr(customInstance) {
+      const target = customInstance || document.getElementById('cfgEvoInstance').value || 'rifasolidária';
+      const modal = document.getElementById('qrModal');
+      const loading = document.getElementById('qrLoading');
+      const img = document.getElementById('qrImageDisplay');
+      const pairing = document.getElementById('pairingCodeBox');
+
+      modal.classList.remove('hidden');
+      loading.classList.remove('hidden');
+      img.classList.add('hidden');
+      pairing.classList.add('hidden');
+
+      try {
+        const res = await fetch(`/api/admin/evolution/connect/${encodeURIComponent(target)}`, {
+          headers: { 'Authorization': `Bearer ${adminState.token}` }
+        });
+        const data = await res.json();
+        loading.classList.add('hidden');
+
+        if (data.base64) {
+          img.src = data.base64.startsWith('data:') ? data.base64 : `data:image/png;base64,${data.base64}`;
+          img.classList.remove('hidden');
+        }
+        if (data.pairingCode || data.code) {
+          pairing.textContent = `Código de Pareamento: ${data.pairingCode || data.code}`;
+          pairing.classList.remove('hidden');
+        }
+        if (!data.base64 && !data.pairingCode) {
+          loading.textContent = 'Esta instância já pode estar conectada! Feche o modal e atualize a lista de instâncias.';
+          loading.classList.remove('hidden');
+        }
+      } catch (err) {
+        loading.textContent = 'Erro ao obter QR Code: ' + err.message;
+        loading.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('btnShowQrCode').addEventListener('click', () => showInstanceQr());
+    document.getElementById('btnCloseQrModal').addEventListener('click', () => document.getElementById('qrModal').classList.add('hidden'));
+    document.getElementById('btnRefreshQr').addEventListener('click', () => showInstanceQr());
+
+    // Testar Chave do Asaas
+    document.getElementById('btnTestAsaas').addEventListener('click', async () => {
+      const key = document.getElementById('cfgAsaasKey').value;
+      const env = document.getElementById('cfgAsaasEnv').value;
+      const fb = document.getElementById('testAsaasFeedback');
+      fb.classList.remove('hidden', 'text-rose-600', 'text-emerald-600');
+      fb.textContent = 'Testando conexão com a API do Asaas...';
+
+      try {
+        const res = await fetch('/api/admin/test-asaas', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminState.token}`
+          },
+          body: JSON.stringify({ apiKey: key, environment: env })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          fb.classList.add('text-emerald-600');
+          fb.textContent = `✓ Chave válida e autenticada! Saldo na conta: ${formatCurrency(data.result.balance)} (${env.toUpperCase()})`;
+          document.getElementById('asaasStatusBadge').className = 'text-[11px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800';
+          document.getElementById('asaasStatusBadge').textContent = `Conectado (${env})`;
+        } else {
+          fb.classList.add('text-rose-600');
+          fb.textContent = `❌ ${data.error || 'Falha ao autenticar no Asaas'}`;
+        }
+      } catch (err) {
+        fb.classList.add('text-rose-600');
+        fb.textContent = `❌ Erro: ${err.message}`;
+      }
+    });
+
+    // Simulação Completa da Automação (Cota -> PIX -> WhatsApp)
+    document.getElementById('btnRunFullAutomation').addEventListener('click', async () => {
+      const phone = document.getElementById('simAutomationPhone').value;
+      const fb = document.getElementById('simAutomationFeedback');
+      if (!phone) {
+        alert('Digite o número de WhatsApp com DDD para receber a notificação de teste.');
+        return;
+      }
+
+      fb.classList.remove('hidden', 'text-rose-600', 'text-emerald-600');
+      fb.textContent = '⏳ Executando fluxo completo: Reservando cota -> Baixando pagamento -> Enviando WhatsApp...';
+
+      try {
+        const res = await fetch('/api/admin/simulate-automation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminState.token}`
+          },
+          body: JSON.stringify({ testPhone: phone, testName: 'Participante Teste' })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          fb.classList.add('text-emerald-600');
+          fb.textContent = `✓ ${data.message}`;
+          loadAdminDashboard();
+        } else {
+          fb.classList.add('text-rose-600');
+          fb.textContent = `❌ ${data.error || 'Falha na automação'}`;
+        }
+      } catch (err) {
+        fb.classList.add('text-rose-600');
+        fb.textContent = `❌ Erro: ${err.message}`;
+      }
+    });
+
+    // Testar WhatsApp
+    document.getElementById('btnTestWhatsApp').addEventListener('click', async () => {
+      const phone = document.getElementById('testPhoneInput').value;
+      const feedback = document.getElementById('testWhatsAppFeedback');
+      if (!phone) {
+        alert('Digite o número com DDD para teste.');
+        return;
+      }
+
+      feedback.classList.remove('hidden', 'text-rose-600', 'text-emerald-600');
+      feedback.textContent = 'Enviando teste...';
+
+      try {
+        const res = await fetch('/api/admin/test-whatsapp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminState.token}`
+          },
+          body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          feedback.classList.add('text-emerald-600');
+          feedback.textContent = '✓ Mensagem de teste enviada com sucesso no WhatsApp!';
+        } else {
+          feedback.classList.add('text-rose-600');
+          feedback.textContent = '❌ Erro: ' + (data.error || 'Falha ao enviar');
+        }
+      } catch (err) {
+        feedback.classList.add('text-rose-600');
+        feedback.textContent = '❌ Erro: ' + err.message;
+      }
+    });
+
+    // Filtros e eventos
+    document.getElementById('filterOrderStatus').addEventListener('change', applyOrdersFilter);
+    document.getElementById('searchOrdersInput').addEventListener('input', applyOrdersFilter);
+    document.getElementById('btnRefreshOrders').addEventListener('click', loadAdminDashboard);
+
+    // Inicialização direta: valida sessão ou exige senha
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Limpa qualquer token legado padrão 'admin123' do cache do navegador
+      if (adminState.token === 'admin123') {
+        adminState.token = '';
+        localStorage.removeItem('rifa_admin_token');
+      }
+
+      if (adminState.token) {
+        try {
+          const res = await fetch('/api/admin/dashboard', {
+            headers: { 'Authorization': `Bearer ${adminState.token}` }
+          });
+          if (res.ok) {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('adminApp').classList.remove('hidden');
+            loadAdminDashboard();
+            return;
+          }
+        } catch (e) {}
+
+        adminState.token = '';
+        localStorage.removeItem('rifa_admin_token');
+      }
+
+      // Exige autenticação por senha
+      document.getElementById('loginModal').classList.remove('hidden');
+      document.getElementById('adminApp').classList.add('hidden');
+      setTimeout(() => {
+        const input = document.getElementById('adminPasswordInput');
+        if (input) input.focus();
+      }, 100);
+    });
+  </script>
+</body>
+</html>
