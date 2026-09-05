@@ -135,25 +135,38 @@ async function getOrderById(orderId) {
 
 // Obter pedidos por telefone ou CPF (para a tela "Meus Bilhetes")
 async function getOrdersByCustomer(phoneOrCpf) {
-  const cleaned = phoneOrCpf.replace(/\D/g, '');
+  const cleaned = (phoneOrCpf || '').replace(/\D/g, '');
+  const raw = (phoneOrCpf || '').trim().toLowerCase();
+
+  if (!cleaned && !raw) return [];
+
+  let orders = [];
+
   if (isSupabaseConfigured) {
     const { data, error } = await supabase
       .from('raffle_orders')
       .select('*')
-      .or(`customer_phone.ilike.%${cleaned}%,customer_cpf.ilike.%${cleaned}%`)
       .order('created_at', { ascending: false });
-    if (!error && data) return data;
+
+    if (!error && data) {
+      orders = data;
+    }
+  } else {
+    orders = Array.from(memoryStore.orders.values());
   }
 
-  const matches = [];
-  for (const order of memoryStore.orders.values()) {
-    const cleanPhone = order.customer_phone ? order.customer_phone.replace(/\D/g, '') : '';
-    const cleanCpf = order.customer_cpf ? order.customer_cpf.replace(/\D/g, '') : '';
-    if (cleanPhone.includes(cleaned) || cleanCpf.includes(cleaned)) {
-      matches.push(order);
-    }
-  }
-  return matches;
+  // Compara normalizando dígitos (ignora pontos, traços, parênteses e espaços)
+  return orders.filter(order => {
+    const oPhoneClean = (order.customer_phone || '').replace(/\D/g, '');
+    const oCpfClean = (order.customer_cpf || '').replace(/\D/g, '');
+    const oPhoneRaw = (order.customer_phone || '').toLowerCase();
+    const oCpfRaw = (order.customer_cpf || '').toLowerCase();
+
+    return (
+      (cleaned && (oPhoneClean.includes(cleaned) || oCpfClean.includes(cleaned))) ||
+      (raw && (oPhoneRaw.includes(raw) || oCpfRaw.includes(raw)))
+    );
+  });
 }
 
 // Obter todos os pedidos (Admin)
