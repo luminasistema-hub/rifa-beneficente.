@@ -71,7 +71,7 @@ async function getOrCreateCustomer({ name, cpfCnpj, mobilePhone, email }) {
     console.error('Erro na API Asaas ao criar/buscar cliente:', err.response ? err.response.data : err.message);
     const ipError = err.response?.data?.errors?.find(e => e.code === 'not_allowed_ip');
     if (ipError) {
-      throw new Error(`Asaas bloqueou o acesso: IP não autorizado. Seu IP atual é 189.89.11.228. Acesse sua conta Asaas > Minha Conta > Integrações > Chaves de API e adicione esse IP ou remova a restrição.`);
+      throw new Error(`Asaas bloqueou o acesso por IP. No Asaas, acesse Minha Conta > Integrações > Chaves de API e remova a restrição de IP para permitir chamadas da nuvem.`);
     }
     const errorMsg = err.response?.data?.errors?.map(e => e.description).join(', ') || err.message;
     throw new Error('Falha ao registrar cliente no Asaas: ' + errorMsg);
@@ -143,7 +143,7 @@ async function createPixCharge({ customerId, value, description, externalReferen
     console.error('Erro na API Asaas ao gerar cobrança PIX:', err.response ? err.response.data : err.message);
     const ipError = err.response?.data?.errors?.find(e => e.code === 'not_allowed_ip');
     if (ipError) {
-      throw new Error(`Asaas bloqueou o acesso: IP não autorizado. Seu IP atual é 189.89.11.228. Acesse sua conta Asaas > Minha Conta > Integrações > Chaves de API e adicione esse IP ou remova a restrição.`);
+      throw new Error(`Asaas bloqueou o acesso por IP. No Asaas, acesse Minha Conta > Integrações > Chaves de API e remova a restrição de IP para permitir chamadas da nuvem.`);
     }
     const errorMsg = err.response?.data?.errors?.[0]?.description || err.message;
     throw new Error('Falha ao gerar cobrança PIX no Asaas: ' + errorMsg);
