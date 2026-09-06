@@ -329,13 +329,28 @@
           </p>
         </div>
 
+        <!-- Aviso amigável de confirmação e WhatsApp -->
+        <div class="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-3.5 text-left space-y-2 mt-3">
+          <div class="flex items-center gap-2 text-emerald-900 font-extrabold text-xs">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-ping"></span>
+            Aguardando Confirmação do PIX
+          </div>
+          <p class="text-[11px] text-slate-600 leading-relaxed">
+            Após realizar a transferência no seu banco, o comprovante é conferido pela administração para validação das suas cotas.
+          </p>
+          <div class="flex items-start gap-1.5 text-[11px] text-emerald-800 bg-white/90 p-2 rounded-xl border border-emerald-100 font-semibold">
+            <span class="text-sm">📱</span>
+            <span>Assim que confirmado, seus números serão liberados e você receberá seu <strong>comprovante oficial com os bilhetes no seu WhatsApp</strong>!</span>
+          </div>
+        </div>
+
         <!-- Status Polling Spinner -->
-        <div class="flex items-center justify-center gap-2 text-xs text-slate-500 pt-2">
-          <svg class="animate-spin h-4 w-4 text-emerald-600" viewBox="0 0 24 24">
+        <div class="flex items-center justify-center gap-2 text-xs text-slate-400 pt-1">
+          <svg class="animate-spin h-3.5 w-3.5 text-emerald-600" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
-          <span>Identificando pagamento automaticamente...</span>
+          <span class="text-[11px]">Aguardando liberação pelo administrador...</span>
         </div>
 
         <!-- Caixa de Simulação de Pagamento (Modo Teste) -->

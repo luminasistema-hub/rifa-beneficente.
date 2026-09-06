@@ -105,6 +105,7 @@ async function createRaffleOrder({ customerName, customerPhone, customerCpf, cus
         selectedNumbers: normalizedNumbers,
         pixKey,
         pixName,
+        adminPhone: settings.admin_phone || process.env.ADMIN_PHONE || '556392917027',
         approveUrl,
         cancelUrl,
         createdAt: new Date().toISOString()
