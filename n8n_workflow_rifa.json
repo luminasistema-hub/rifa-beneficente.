@@ -1,5 +1,5 @@
 {
-  "name": "Rifa Solidária - Notificação com Botões de Aprovação",
+  "name": "Rifa Solidária - Notificação com Enquete no WhatsApp",
   "nodes": [
     {
       "parameters": {
@@ -20,10 +20,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json.body || $input.first().json;\n\nconst totalFormatted = Number(item.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst cotas = Array.isArray(item.selectedNumbers) ? item.selectedNumbers.join(', ') : item.selectedNumbers;\n\nconst description = `👤 *Comprador:* ${item.customerName}\\n` +\n  `📱 *WhatsApp:* ${item.customerPhone}\\n` +\n  `🎫 *Cotas (${item.numbersCount}):* ${cotas}\\n` +\n  `💰 *Valor a conferir:* R$ ${totalFormatted}\\n\\n` +\n  `🔑 *Chave PIX:* ${item.pixKey} (${item.pixName})\\n\\n` +\n  `Confira no app do seu banco se o PIX caiu e clique no botão abaixo para aprovar ou cancelar.`;\n\nreturn [{\n  json: {\n    ...item,\n    totalFormatted,\n    cotas,\n    description,\n    adminPhone: item.adminPhone || '556392917027'\n  }\n}];"
+        "jsCode": "const item = $input.first().json.body || $input.first().json;\n\nconst totalFormatted = Number(item.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst cotas = Array.isArray(item.selectedNumbers) ? item.selectedNumbers.join(', ') : item.selectedNumbers;\n\n// Título da enquete (resumido e direto)\nconst pollName = `🔔 PIX RIFA: R$ ${totalFormatted}\\n` +\n  `👤 ${item.customerName} (${item.customerPhone})\\n` +\n  `🎫 Cotas (${item.numbersCount}): ${cotas}\\n\\n` +\n  `O PIX caiu na sua conta?`;\n\nreturn [{\n  json: {\n    ...item,\n    totalFormatted,\n    cotas,\n    pollName,\n    adminPhone: item.adminPhone || '556392917027'\n  }\n}];"
       },
       "id": "b0a2cf31-419b-4375-a86a-733d9f10ca24",
-      "name": "Formatar Detalhes",
+      "name": "Formatar Dados",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -34,7 +34,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://evo2.agenciahigher.com.br/message/sendButtons/rifasolidária",
+        "url": "https://evo2.agenciahigher.com.br/message/sendPoll/rifasolidária",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -50,15 +50,46 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  number: $json.adminPhone,\n  title: \"🔔 NOVO PEDIDO DE RIFA\",\n  description: $json.description,\n  footer: \"Rifa Solidária Beneficente\",\n  buttons: [\n    {\n      type: \"url\",\n      displayText: \"✅ Aprovar Pagamento\",\n      url: $json.approveUrl\n    },\n    {\n      type: \"url\",\n      displayText: \"❌ Cancelar Pedido\",\n      url: $json.cancelUrl\n    }\n  ]\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.adminPhone,\n  name: $json.pollName,\n  values: [\n    \"✅ Confirmar Pagamento\",\n    \"❌ Cancelar Pedido\"\n  ],\n  selectableCount: 1\n}) }}",
         "options": {}
       },
       "id": "78ff0f81-2287-4340-84cf-341a99564cb1",
-      "name": "Enviar WhatsApp com Botões",
+      "name": "Enviar Enquete no WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evo2.agenciahigher.com.br/message/sendText/rifasolidária",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Lumina2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.adminPhone,\n  text: `👉 Link de aprovação direta com 1 clique:\\n${$json.approveUrl}`,\n  options: { delay: 500, linkPreview: true }\n}) }}",
+        "options": {}
+      },
+      "id": "92da841a-3199-4c25-bb82-84918e7d23a1",
+      "name": "Enviar Link como Backup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
         300
       ]
     }
@@ -69,18 +100,29 @@
       "main": [
         [
           {
-            "node": "Formatar Detalhes",
+            "node": "Formatar Dados",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Formatar Detalhes": {
+    "Formatar Dados": {
       "main": [
         [
           {
-            "node": "Enviar WhatsApp com Botões",
+            "node": "Enviar Enquete no WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Enquete no WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Enviar Link como Backup",
             "type": "main",
             "index": 0
           }
@@ -92,7 +134,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "bb934812-70b8-44d4-9d56-ff7d1db0e041",
+  "versionId": "e18c5021-9982-4aa1-93c4-9541a7d6e191",
   "id": "rifa-solidaria-pix",
   "meta": {
     "instanceId": "rifa-solidaria-n8n"
