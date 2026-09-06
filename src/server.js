@@ -71,7 +71,8 @@ async function startServer() {
         o.status === 'pending' && 
         o.asaas_payment_id && 
         !o.asaas_payment_id.startsWith('pay_simulado_') &&
-        !o.asaas_payment_id.startsWith('manual_')
+        !o.asaas_payment_id.startsWith('manual_') &&
+        !o.asaas_payment_id.startsWith('pix_direto_')
       );
 
       for (const order of pendingOrders) {

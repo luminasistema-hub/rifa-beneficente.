@@ -20,10 +20,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json.body || $input.first().json;\n\nconst totalFormatted = Number(item.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst cotas = Array.isArray(item.selectedNumbers) ? item.selectedNumbers.join(', ') : item.selectedNumbers;\n\n// Título da enquete (resumido e direto)\nconst pollName = `🔔 PIX RIFA: R$ ${totalFormatted}\\n` +\n  `👤 ${item.customerName} (${item.customerPhone})\\n` +\n  `🎫 Cotas (${item.numbersCount}): ${cotas}\\n\\n` +\n  `O PIX caiu na sua conta?`;\n\nreturn [{\n  json: {\n    ...item,\n    totalFormatted,\n    cotas,\n    pollName,\n    adminPhone: item.adminPhone || '556392917027'\n  }\n}];"
+        "jsCode": "const item = $input.first().json.body || $input.first().json;\n\n// TRAVA ANTI-LOOP: ignora se não for um pedido novo vindo do sistema de rifa\nif (item.event !== 'order_created' || !item.orderId) {\n  return [];\n}\n\nconst totalFormatted = Number(item.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst cotas = Array.isArray(item.selectedNumbers) ? item.selectedNumbers.join(', ') : item.selectedNumbers;\n\n// Título da enquete\nconst pollName = `🔔 PIX RIFA: R$ ${totalFormatted}\\n` +\n  `👤 ${item.customerName} (${item.customerPhone})\\n` +\n  `🎫 Cotas (${item.numbersCount}): ${cotas}\\n\\n` +\n  `O PIX caiu na sua conta?`;\n\nreturn [{\n  json: {\n    ...item,\n    totalFormatted,\n    cotas,\n    pollName,\n    adminPhone: item.adminPhone || '556392917027'\n  }\n}];"
       },
       "id": "b0a2cf31-419b-4375-a86a-733d9f10ca24",
-      "name": "Formatar Dados",
+      "name": "Formatar Dados (com Trava)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -81,11 +81,11 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  number: $json.adminPhone,\n  text: `👉 Link de aprovação direta com 1 clique:\\n${$json.approveUrl}`,\n  options: { delay: 500, linkPreview: true }\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.adminPhone,\n  text: `👉 Link de aprovação com 1 clique:\\n${$json.approveUrl}`,\n  options: { delay: 500, linkPreview: true }\n}) }}",
         "options": {}
       },
       "id": "92da841a-3199-4c25-bb82-84918e7d23a1",
-      "name": "Enviar Link como Backup",
+      "name": "Enviar Link de Backup",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -100,14 +100,14 @@
       "main": [
         [
           {
-            "node": "Formatar Dados",
+            "node": "Formatar Dados (com Trava)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Formatar Dados": {
+    "Formatar Dados (com Trava)": {
       "main": [
         [
           {
@@ -122,7 +122,7 @@
       "main": [
         [
           {
-            "node": "Enviar Link como Backup",
+            "node": "Enviar Link de Backup",
             "type": "main",
             "index": 0
           }
@@ -134,7 +134,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "e18c5021-9982-4aa1-93c4-9541a7d6e191",
+  "versionId": "b11a9101-7712-4aa1-93c4-9541a7d6e191",
   "id": "rifa-solidaria-pix",
   "meta": {
     "instanceId": "rifa-solidaria-n8n"
