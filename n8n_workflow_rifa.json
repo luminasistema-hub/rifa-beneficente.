@@ -1,5 +1,5 @@
 {
-  "name": "Rifa Solidária - Notificação e Aprovação de PIX",
+  "name": "Rifa Solidária - Notificação com Botões de Aprovação",
   "nodes": [
     {
       "parameters": {
@@ -20,10 +20,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json.body || $input.first().json;\n\nconst totalFormatted = Number(item.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst cotas = Array.isArray(item.selectedNumbers) ? item.selectedNumbers.join(', ') : item.selectedNumbers;\n\nconst message = `🔔 *NOVO PEDIDO DE RIFA AGUARDANDO PIX!*\\n\\n` +\n  `👤 *Comprador:* ${item.customerName}\\n` +\n  `📱 *WhatsApp:* ${item.customerPhone}\\n` +\n  `🎫 *Cotas (${item.numbersCount}):* ${cotas}\\n` +\n  `💰 *Valor a conferir:* R$ ${totalFormatted}\\n\\n` +\n  `🔑 *Chave PIX:* ${item.pixKey} (${item.pixName})\\n\\n` +\n  `Confira no app do seu banco se o PIX caiu.\\n\\n` +\n  `✅ *CLIQUE ABAIXO PARA APROVAR COM 1 CLIQUE:*\\n` +\n  `${item.approveUrl}\\n\\n` +\n  `❌ *Para cancelar:*\\n` +\n  `${item.cancelUrl}`;\n\nreturn [{\n  json: {\n    ...item,\n    totalFormatted,\n    cotas,\n    whatsappMessage: message,\n    adminPhone: item.adminPhone || '556392917027'\n  }\n}];"
+        "jsCode": "const item = $input.first().json.body || $input.first().json;\n\nconst totalFormatted = Number(item.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst cotas = Array.isArray(item.selectedNumbers) ? item.selectedNumbers.join(', ') : item.selectedNumbers;\n\nconst description = `👤 *Comprador:* ${item.customerName}\\n` +\n  `📱 *WhatsApp:* ${item.customerPhone}\\n` +\n  `🎫 *Cotas (${item.numbersCount}):* ${cotas}\\n` +\n  `💰 *Valor a conferir:* R$ ${totalFormatted}\\n\\n` +\n  `🔑 *Chave PIX:* ${item.pixKey} (${item.pixName})\\n\\n` +\n  `Confira no app do seu banco se o PIX caiu e clique no botão abaixo para aprovar ou cancelar.`;\n\nreturn [{\n  json: {\n    ...item,\n    totalFormatted,\n    cotas,\n    description,\n    adminPhone: item.adminPhone || '556392917027'\n  }\n}];"
       },
       "id": "b0a2cf31-419b-4375-a86a-733d9f10ca24",
-      "name": "Formatar Mensagem",
+      "name": "Formatar Detalhes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -34,7 +34,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://evo2.agenciahigher.com.br/message/sendText/rifasolidária",
+        "url": "https://evo2.agenciahigher.com.br/message/sendButtons/rifasolidária",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -50,11 +50,11 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: $json.adminPhone, text: $json.whatsappMessage, options: { delay: 1000, presence: 'composing', linkPreview: true } }) }}",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.adminPhone,\n  title: \"🔔 NOVO PEDIDO DE RIFA\",\n  description: $json.description,\n  footer: \"Rifa Solidária Beneficente\",\n  buttons: [\n    {\n      type: \"url\",\n      displayText: \"✅ Aprovar Pagamento\",\n      url: $json.approveUrl\n    },\n    {\n      type: \"url\",\n      displayText: \"❌ Cancelar Pedido\",\n      url: $json.cancelUrl\n    }\n  ]\n}) }}",
         "options": {}
       },
       "id": "78ff0f81-2287-4340-84cf-341a99564cb1",
-      "name": "Enviar WhatsApp Admin",
+      "name": "Enviar WhatsApp com Botões",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -69,18 +69,18 @@
       "main": [
         [
           {
-            "node": "Formatar Mensagem",
+            "node": "Formatar Detalhes",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Formatar Mensagem": {
+    "Formatar Detalhes": {
       "main": [
         [
           {
-            "node": "Enviar WhatsApp Admin",
+            "node": "Enviar WhatsApp com Botões",
             "type": "main",
             "index": 0
           }
@@ -92,7 +92,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "f78d910a-3312-42da-a991-817de7c82302",
+  "versionId": "bb934812-70b8-44d4-9d56-ff7d1db0e041",
   "id": "rifa-solidaria-pix",
   "meta": {
     "instanceId": "rifa-solidaria-n8n"
