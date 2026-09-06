@@ -1,0 +1,101 @@
+{
+  "name": "Rifa Solidária - Notificação e Aprovação de PIX",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rifa-novo-pedido",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "1187d9a1-8d2a-4a25-b461-862d854ce112",
+      "name": "Webhook Rifa",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "rifa-novo-pedido"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json.body || $input.first().json;\n\nconst totalFormatted = Number(item.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst cotas = Array.isArray(item.selectedNumbers) ? item.selectedNumbers.join(', ') : item.selectedNumbers;\n\nconst message = `🔔 *NOVO PEDIDO DE RIFA AGUARDANDO PIX!*\\n\\n` +\n  `👤 *Comprador:* ${item.customerName}\\n` +\n  `📱 *WhatsApp:* ${item.customerPhone}\\n` +\n  `🎫 *Cotas (${item.numbersCount}):* ${cotas}\\n` +\n  `💰 *Valor a conferir:* R$ ${totalFormatted}\\n\\n` +\n  `🔑 *Chave PIX:* ${item.pixKey} (${item.pixName})\\n\\n` +\n  `Confira no app do seu banco se o PIX caiu.\\n\\n` +\n  `✅ *CLIQUE ABAIXO PARA APROVAR COM 1 CLIQUE:*\\n` +\n  `${item.approveUrl}\\n\\n` +\n  `❌ *Para cancelar:*\\n` +\n  `${item.cancelUrl}`;\n\nreturn [{\n  json: {\n    ...item,\n    totalFormatted,\n    cotas,\n    whatsappMessage: message,\n    adminPhone: '556392007673'\n  }\n}];"
+      },
+      "id": "b0a2cf31-419b-4375-a86a-733d9f10ca24",
+      "name": "Formatar Mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evo2.agenciahigher.com.br/message/sendText/rifasolidária",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Lumina2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $json.adminPhone }}\",\n  \"text\": \"{{ $json.whatsappMessage }}\",\n  \"options\": {\n    \"delay\": 1000,\n    \"presence\": \"composing\",\n    \"linkPreview\": true\n  }\n}",
+        "options": {}
+      },
+      "id": "78ff0f81-2287-4340-84cf-341a99564cb1",
+      "name": "Enviar WhatsApp Admin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Rifa": {
+      "main": [
+        [
+          {
+            "node": "Formatar Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e30c4912-70b8-44d4-9d56-ff7d1db0e041",
+  "id": "rifa-solidaria-pix",
+  "meta": {
+    "instanceId": "rifa-solidaria-n8n"
+  },
+  "tags": []
+}

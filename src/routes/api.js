@@ -112,6 +112,113 @@ router.get('/orders/:id', async (req, res) => {
   }
 });
 
+// Aprovação com 1 clique (para o link enviado no WhatsApp do Admin)
+router.get('/orders/:id/quick-approve', async (req, res) => {
+  try {
+    const { token } = req.query;
+    const orderId = req.params.id;
+    const order = await db.getOrderById(orderId);
+
+    if (!order) {
+      return res.status(404).send('<h2>Pedido não encontrado.</h2>');
+    }
+
+    // Valida token de segurança
+    if (token !== order.id && token !== process.env.ADMIN_PASSWORD) {
+      return res.status(403).send('<h2>Token de autorização inválido.</h2>');
+    }
+
+    if (order.status === 'paid') {
+      return res.send(`
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Pedido Já Confirmado</title><script src="https://cdn.tailwindcss.com"></script></head>
+        <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4 text-center">
+          <div class="bg-slate-800 p-8 rounded-3xl max-w-sm w-full border border-slate-700 shadow-2xl">
+            <div class="text-5xl mb-4">💚</div>
+            <h1 class="text-xl font-bold text-emerald-400 mb-2">Pedido Já Foi Aprovado!</h1>
+            <p class="text-sm text-slate-300 mb-6">As cotas <strong>${order.selected_numbers.join(', ')}</strong> de <strong>${order.customer_name}</strong> já estão confirmadas e ativas no sorteio.</p>
+            <a href="/admin" class="inline-block bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl text-sm transition-all">Ir para o Painel Admin</a>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    const { order: confirmedOrder } = await raffle.confirmOrderPayment(orderId, 'whatsapp_1click_approve');
+
+    return res.send(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>PIX Aprovado!</title><script src="https://cdn.tailwindcss.com"></script></head>
+      <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4 text-center">
+        <div class="bg-slate-800 p-8 rounded-3xl max-w-sm w-full border border-emerald-500/30 shadow-2xl">
+          <div class="text-6xl mb-4">🎉</div>
+          <h1 class="text-2xl font-black text-emerald-400 mb-2">Pagamento Confirmado!</h1>
+          <p class="text-sm text-slate-300 mb-4">O pagamento de <strong>R$ ${Number(confirmedOrder.total_amount).toFixed(2).replace('.', ',')}</strong> de <strong>${confirmedOrder.customer_name}</strong> foi aprovado com sucesso!</p>
+          <div class="bg-slate-900 p-4 rounded-2xl mb-6 border border-slate-700">
+            <span class="text-xs text-slate-400 block mb-1 font-semibold">Cotas Liberadas:</span>
+            <div class="flex flex-wrap justify-center gap-1.5 font-black text-emerald-400 text-base">
+              ${confirmedOrder.selected_numbers.map(n => `<span class="bg-emerald-950 border border-emerald-500/30 px-2 py-0.5 rounded-lg">${n}</span>`).join('')}
+            </div>
+          </div>
+          <p class="text-xs text-emerald-300 font-semibold mb-6">📱 Mensagem e bilhetes enviados no WhatsApp do comprador!</p>
+          <a href="/admin" class="inline-block bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl text-sm transition-all">Voltar ao Painel Admin</a>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (err) {
+    res.status(500).send(`<h2>Erro ao aprovar pedido: ${err.message}</h2>`);
+  }
+});
+
+// Endpoint POST para o n8n aprovar o pedido programaticamente
+router.post('/orders/:id/approve', async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const { order } = await raffle.confirmOrderPayment(orderId, 'n8n_automation');
+    res.json({ success: true, message: 'Pedido aprovado com sucesso via n8n!', order });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Cancelamento de pedido (libera as cotas de volta para a rifa)
+router.get('/orders/:id/quick-cancel', async (req, res) => {
+  try {
+    const { token } = req.query;
+    const orderId = req.params.id;
+    const order = await db.getOrderById(orderId);
+
+    if (!order) {
+      return res.status(404).send('<h2>Pedido não encontrado.</h2>');
+    }
+
+    if (token !== order.id && token !== process.env.ADMIN_PASSWORD) {
+      return res.status(403).send('<h2>Token inválido.</h2>');
+    }
+
+    await db.cancelOrder(orderId);
+    return res.send(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Pedido Cancelado</title><script src="https://cdn.tailwindcss.com"></script></head>
+      <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4 text-center">
+        <div class="bg-slate-800 p-8 rounded-3xl max-w-sm w-full border border-rose-500/30 shadow-2xl">
+          <div class="text-5xl mb-4">❌</div>
+          <h1 class="text-xl font-bold text-rose-400 mb-2">Pedido Cancelado</h1>
+          <p class="text-sm text-slate-300 mb-6">As cotas foram liberadas imediatamente de volta para a rifa.</p>
+          <a href="/admin" class="inline-block bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl text-sm transition-all">Ir para o Painel Admin</a>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (err) {
+    res.status(500).send(`<h2>Erro ao cancelar: ${err.message}</h2>`);
+  }
+});
+
 // Simulação de pagamento para testes (quando em ambiente local/demonstração)
 router.post('/orders/:id/simulate-payment', async (req, res) => {
   try {

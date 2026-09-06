@@ -7,7 +7,13 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js"
   },
-  "keywords": ["rifa", "pix", "asaas", "supabase", "evolution-api"],
+  "keywords": [
+    "rifa",
+    "pix",
+    "asaas",
+    "supabase",
+    "evolution-api"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -16,6 +22,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "qrcode": "^1.5.4",
     "uuid": "^11.1.0"
   }
 }

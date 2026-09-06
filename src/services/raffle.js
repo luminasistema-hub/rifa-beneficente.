@@ -60,34 +60,64 @@ async function createRaffleOrder({ customerName, customerPhone, customerCpf, cus
   }
 
   try {
-    // 3. Cria cliente no Asaas
-    const asaasCustomerId = await asaas.getOrCreateCustomer({
-      name: customerName,
-      cpfCnpj: customerCpf,
-      mobilePhone: customerPhone,
-      email: customerEmail
+    const pixService = require('./pix');
+    const axios = require('axios');
+
+    // Chave PIX e dados do titular
+    const pixKey = settings.pix_key || process.env.PIX_KEY || '60566541335';
+    const pixName = settings.pix_name || process.env.PIX_BENEFICIARY_NAME || 'Alane Karolliny Souza Costa';
+    const pixCity = settings.pix_city || process.env.PIX_BENEFICIARY_CITY || 'Araguaina';
+    const n8nWebhookUrl = settings.n8n_webhook_url || process.env.N8N_WEBHOOK_URL || 'https://n8n2.agenciahigher.com.br/webhook/rifa-novo-pedido';
+
+    // 3. Gera cobrança PIX Direta (BRCode oficial sem taxas)
+    const directPix = await pixService.createDirectPixPayment({
+      key: pixKey,
+      name: pixName,
+      city: pixCity,
+      amount: totalAmount,
+      txId: orderId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 25),
+      description: `Rifa ${normalizedNumbers.length} cotas`
     });
 
-    // 4. Cria cobrança PIX no Asaas
-    const description = `${settings.title} - ${normalizedNumbers.length} cota(s): ${normalizedNumbers.slice(0, 5).join(', ')}${normalizedNumbers.length > 5 ? '...' : ''}`;
-    const pixCharge = await asaas.createPixCharge({
-      customerId: asaasCustomerId,
-      value: totalAmount,
-      description,
-      externalReference: orderId
-    });
+    const baseUrl = process.env.BASE_URL || 'https://rifa-beneficentee.vercel.app';
+    const approveUrl = `${baseUrl}/api/orders/${orderId}/quick-approve?token=${orderId}`;
+    const cancelUrl = `${baseUrl}/api/orders/${orderId}/quick-cancel?token=${orderId}`;
 
-    // 5. Atualiza o pedido com os dados do PIX gerado
+    // 4. Atualiza o pedido com os dados do PIX gerado
     const updatedOrder = await db.updateOrder(orderId, {
-      asaas_payment_id: pixCharge.paymentId,
-      asaas_invoice_url: pixCharge.invoiceUrl,
-      pix_qr_code: pixCharge.pixQrCode,
-      pix_code: pixCharge.pixCode
+      asaas_payment_id: `pix_direto_${orderId.slice(0, 8)}`,
+      asaas_invoice_url: null,
+      pix_qr_code: directPix.pixQrCode,
+      pix_code: directPix.pixCode
     });
+
+    // 5. Dispara webhook para o n8n em segundo plano
+    if (n8nWebhookUrl) {
+      axios.post(n8nWebhookUrl, {
+        event: 'order_created',
+        orderId,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerCpf: customerCpf.trim(),
+        customerEmail: customerEmail ? customerEmail.trim() : null,
+        totalAmount,
+        numbersCount: normalizedNumbers.length,
+        selectedNumbers: normalizedNumbers,
+        pixKey,
+        pixName,
+        approveUrl,
+        cancelUrl,
+        createdAt: new Date().toISOString()
+      }, { timeout: 10000 }).then(() => {
+        console.log(`⚡ [n8n] Webhook disparado com sucesso para o pedido ${orderId}!`);
+      }).catch(err => {
+        console.warn('⚠️ Aviso ao enviar webhook para n8n:', err.message);
+      });
+    }
 
     return updatedOrder || initialOrderData;
   } catch (err) {
-    // Se falhou ao comunicar com Asaas, cancela a reserva dos números imediatamente
+    // Se falhou ao gerar o PIX, cancela a reserva dos números imediatamente
     console.error('Falha na criação do pedido PIX:', err.message);
     await db.cancelOrder(orderId);
     throw err;
