@@ -1,5 +1,5 @@
 {
-  "name": "Rifa Solidária - Notificação com Enquete no WhatsApp",
+  "name": "Rifa Solidária - Notificação e Aprovação Direta",
   "nodes": [
     {
       "parameters": {
@@ -20,45 +20,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json.body || $input.first().json;\n\n// TRAVA ANTI-LOOP: ignora se não for um pedido novo vindo do sistema de rifa\nif (item.event !== 'order_created' || !item.orderId) {\n  return [];\n}\n\nconst totalFormatted = Number(item.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst cotas = Array.isArray(item.selectedNumbers) ? item.selectedNumbers.join(', ') : item.selectedNumbers;\n\n// Título da enquete\nconst pollName = `🔔 PIX RIFA: R$ ${totalFormatted}\\n` +\n  `👤 ${item.customerName} (${item.customerPhone})\\n` +\n  `🎫 Cotas (${item.numbersCount}): ${cotas}\\n\\n` +\n  `O PIX caiu na sua conta?`;\n\nreturn [{\n  json: {\n    ...item,\n    totalFormatted,\n    cotas,\n    pollName,\n    adminPhone: item.adminPhone || '556392917027'\n  }\n}];"
+        "jsCode": "const item = $input.first().json.body || $input.first().json;\n\n// TRAVA ANTI-LOOP: ignora se não for um pedido novo oficial da rifa\nif (item.event !== 'order_created' || !item.orderId) {\n  return [];\n}\n\nconst totalFormatted = Number(item.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst cotas = Array.isArray(item.selectedNumbers) ? item.selectedNumbers.join(', ') : item.selectedNumbers;\n\nconst messageText = `🔔 *NOVO PEDIDO NA RIFA BENEFICENTE!*\\n\\n` +\n  `👤 *Comprador:* ${item.customerName}\\n` +\n  `📱 *WhatsApp:* ${item.customerPhone}\\n` +\n  `🎫 *Cotas (${item.numbersCount}):* ${cotas}\\n` +\n  `💰 *Valor a conferir:* R$ ${totalFormatted}\\n\\n` +\n  `🔑 *Chave PIX da Alane:* ${item.pixKey}\\n\\n` +\n  `Confira no app do seu banco se o PIX caiu.\\n\\n` +\n  `✅ *CLIQUE ABAIXO PARA APROVAR:*\\n` +\n  `👉 ${item.approveUrl}\\n\\n` +\n  `❌ *Para cancelar:*\\n` +\n  `👉 ${item.cancelUrl}`;\n\nreturn [{\n  json: {\n    ...item,\n    totalFormatted,\n    cotas,\n    messageText,\n    adminPhone: '556392917027'\n  }\n}];"
       },
       "id": "b0a2cf31-419b-4375-a86a-733d9f10ca24",
-      "name": "Formatar Dados (com Trava)",
+      "name": "Formatar Dados",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         420,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://evo2.agenciahigher.com.br/message/sendPoll/rifasolidária",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "Lumina2026"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  number: $json.adminPhone,\n  name: $json.pollName,\n  values: [\n    \"✅ Confirmar Pagamento\",\n    \"❌ Cancelar Pedido\"\n  ],\n  selectableCount: 1\n}) }}",
-        "options": {}
-      },
-      "id": "78ff0f81-2287-4340-84cf-341a99564cb1",
-      "name": "Enviar Enquete no WhatsApp",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        640,
         300
       ]
     },
@@ -81,15 +50,15 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  number: $json.adminPhone,\n  text: `👉 Link de aprovação com 1 clique:\\n${$json.approveUrl}`,\n  options: { delay: 500, linkPreview: true }\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.adminPhone,\n  text: $json.messageText,\n  options: {\n    delay: 1000,\n    presence: 'composing',\n    linkPreview: true\n  }\n}) }}",
         "options": {}
       },
-      "id": "92da841a-3199-4c25-bb82-84918e7d23a1",
-      "name": "Enviar Link de Backup",
+      "id": "78ff0f81-2287-4340-84cf-341a99564cb1",
+      "name": "Enviar WhatsApp com Link",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        860,
+        640,
         300
       ]
     }
@@ -100,29 +69,18 @@
       "main": [
         [
           {
-            "node": "Formatar Dados (com Trava)",
+            "node": "Formatar Dados",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Formatar Dados (com Trava)": {
+    "Formatar Dados": {
       "main": [
         [
           {
-            "node": "Enviar Enquete no WhatsApp",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Enviar Enquete no WhatsApp": {
-      "main": [
-        [
-          {
-            "node": "Enviar Link de Backup",
+            "node": "Enviar WhatsApp com Link",
             "type": "main",
             "index": 0
           }
@@ -134,7 +92,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "b11a9101-7712-4aa1-93c4-9541a7d6e191",
+  "versionId": "c42a8192-3412-42da-a991-817de7c82302",
   "id": "rifa-solidaria-pix",
   "meta": {
     "instanceId": "rifa-solidaria-n8n"
