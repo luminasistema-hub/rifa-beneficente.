@@ -16,16 +16,16 @@ const memoryStore = {
     prize: 'iPhone 15 128GB ou R$ 3.500,00 no PIX',
     price_per_number: 10.00,
     min_number: 0,
-    max_number: 600,
+    max_number: 999,
     reservation_timeout_minutes: 15,
     admin_password: process.env.ADMIN_PASSWORD || 'admin123'
   },
-  numbers: [], // preenchido de 000 a 600
+  numbers: [], // preenchido de 000 a 999 (1.000 cotas)
   orders: new Map()
 };
 
-// Inicializa a lista de 000 a 600 na memória
-for (let i = 0; i <= 600; i++) {
+// Inicializa a lista de 000 a 999 na memória
+for (let i = 0; i <= 999; i++) {
   const numStr = String(i).padStart(3, '0');
   memoryStore.numbers.push({
     number: numStr,
@@ -67,10 +67,10 @@ async function initDatabase() {
 
     // Se estiver realmente vazio (count === 0), popula uma única vez
     if (count === 0) {
-      console.log('🌱 Tabela vazia. Populando 601 números (000 a 600) no Supabase...');
+      console.log('🌱 Tabela vazia. Populando 1.000 números (000 a 999) no Supabase...');
       const batchSize = 100;
       const allNumbers = [];
-      for (let i = 0; i <= 600; i++) {
+      for (let i = 0; i <= 999; i++) {
         allNumbers.push({
           number: String(i).padStart(3, '0'),
           number_int: i,
@@ -82,7 +82,7 @@ async function initDatabase() {
         const batch = allNumbers.slice(i, i + batchSize);
         await supabase.from('raffle_numbers').insert(batch);
       }
-      console.log('✅ Números de 000 a 600 criados com sucesso no Supabase!');
+      console.log('✅ Números de 000 a 999 criados com sucesso no Supabase!');
     }
   } catch (err) {
     console.error('Erro na verificação inicial do Supabase:', err.message);

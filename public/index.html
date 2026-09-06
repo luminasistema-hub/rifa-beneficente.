@@ -95,17 +95,25 @@
         </div>
       </div>
 
-      <!-- Barra de Progresso de Arrecadação -->
-      <div class="mt-6 bg-emerald-900/40 rounded-xl p-3 backdrop-blur-sm border border-emerald-500/20">
+      <!-- Barra de Progresso de Arrecadação com Meta de 70% -->
+      <div class="mt-6 bg-emerald-900/40 rounded-xl p-3.5 backdrop-blur-sm border border-emerald-500/20">
         <div class="flex justify-between items-center text-xs font-semibold mb-1.5">
           <span class="flex items-center gap-1.5">
-            <span>🎯 Meta da Ação:</span>
-            <span id="progressPercent" class="text-emerald-200">0% vendido</span>
+            <span>🎯 Progresso das Vendas:</span>
+            <span id="progressPercent" class="text-emerald-200 font-bold">0% vendido</span>
           </span>
           <span id="progressRaised" class="text-white font-bold">R$ 0,00 arrecadado</span>
         </div>
-        <div class="w-full bg-emerald-950/60 rounded-full h-3.5 overflow-hidden p-0.5">
+        <div class="relative w-full bg-emerald-950/60 rounded-full h-4 overflow-hidden p-0.5">
           <div id="progressBar" class="bg-gradient-to-r from-emerald-400 to-teal-300 h-full rounded-full transition-all duration-700 w-0"></div>
+          <!-- Marcador visual de 70% -->
+          <div class="absolute top-0 bottom-0 left-[70%] border-r-2 border-dashed border-amber-300 pointer-events-none" title="Meta para Sorteio: 70%"></div>
+        </div>
+        
+        <!-- Aviso da Data do Sorteio -->
+        <div class="mt-3 flex items-center gap-2 bg-emerald-950/50 border border-emerald-400/30 rounded-xl px-3 py-2 text-xs text-emerald-100">
+          <span class="text-base">📅</span>
+          <span><strong>Data do Sorteio:</strong> Será agendada e divulgada assim que atingirmos a meta de <strong>70% das cotas vendidas</strong>!</span>
         </div>
       </div>
     </div>
@@ -145,7 +153,7 @@
           🟢 Apenas Livres (<span id="countAvailable">0</span>)
         </button>
         <button type="button" data-filter="all" class="filter-tab bg-slate-100 text-slate-700 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition-colors whitespace-nowrap">
-          Todos (<span id="countAll">601</span>)
+          Todos (<span id="countAll">1.000</span>)
         </button>
         <button type="button" data-filter="reserved" class="filter-tab bg-slate-100 text-slate-700 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition-colors whitespace-nowrap">
           🟡 Reservados (<span id="countReserved">0</span>)
@@ -180,10 +188,10 @@
       </div>
     </div>
 
-    <!-- Grade de Números (000 a 600) -->
+    <!-- Grade de Números (000 a 999 - 1.000 Cotas) -->
     <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm min-h-[400px]">
       <div id="numbersGrid" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
-        <!-- Preenchido dinamicamente pelo JavaScript de 000 a 600 -->
+        <!-- Preenchido dinamicamente pelo JavaScript de 000 a 999 -->
         <div class="col-span-full text-center py-12 text-slate-400">
           Carregando números da rifa...
         </div>
